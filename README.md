@@ -1,6 +1,6 @@
 # A Novel Methodology for Modelling First and Second Order Phase Transformations
 
-This repository contians the code used to produce figures in preprint: https://arxiv.org/abs/2411.16430
+This repository contians the code used to produce figures in our preprint: https://arxiv.org/abs/2411.16430
 
 If you find the codes useful please cite our work: 
 
@@ -21,4 +21,4 @@ cd Modelling-1st-and-2nd-Order-Phase-Transformations
 bash batch.sh 
 ```
 
-open the displayed url "http://127.0.0.1:8888/lab?token=..." in a browser 
+Open the displayed url "http://127.0.0.1:8888/lab?token=..." in a web-browser.
