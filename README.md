@@ -82,11 +82,18 @@ DG0/CG1/DG0 (RT/DG)      max oscillation 11.904  final 0.0       dofs in (0.26,0
 DG1/CG2/DG1              max oscillation 1.139   final 3.8e-02   dofs in (0.26,0.74): 2   Newton it/step 1.5
 ```
 
+## Notation
+
+In the paper the mole and site fractions are written phi (code variables `X`, `X0`, `X1`) and the
+vacancy generation rate is psi (code variable `phi`). The plots label the fractions phi; the stored
+2D outputs of the notebooks were produced before this relabelling and still show x, a re-run
+reproduces them with phi.
+
 ## History
 
 - **October 2026 (v3 of the paper):** `ch-limit-CG2.ipynb` added (the notebook behind the figures;
-  the legend of Fig. 5 and the plotting of Fig. 6 were fixed and the 1D cells re-executed, the 2D
-  outputs are unchanged), the RT/DG notebook renamed from `ch-limit.ipynb` to `ch-limit-RTDG.ipynb`,
+  the legend of Fig. 5 and the plotting of Fig. 6 were fixed, the axis labels changed to phi, and the
+  1D cells re-executed; the 2D outputs are unchanged), the RT/DG notebook renamed from `ch-limit.ipynb` to `ch-limit-RTDG.ipynb`,
   `verify_construction.py` extended to the equal-order layouts, `code/` added.
 - **July 2026:** clean variational construction in the RT/DG notebook. The free-energy rate enters
   as the directional derivative `derivative(F, X_s, X_t)` (chain rule at the frozen state `X_s`,
