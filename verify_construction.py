@@ -1,5 +1,12 @@
-"""Verify that the clean TEP construction used in ch-limit.ipynb assembles the
-identical residual to the originally published Lagrangian construction.
+"""Verify that the clean TEP construction (variation with respect to the rates and
+multipliers at the frozen state, then backward Euler; the direction of the free-energy
+variation is a placeholder Function that is replaced by the discrete rate afterwards) assembles the identical residual
+to the incremental-functional construction, for all element layouts used in the repository:
+
+  1. 1D binary, DG0 / CG1 / DG0 with facet jump penalty      (ch-limit-RTDG.ipynb, 1D cells)
+  2. 1D binary, CG2 / CG2 / CG2 with gradient energy          (ch-limit-CG2.ipynb, 1D cells; figures of the paper)
+  3. 2D ternary with vacancies, DG0 / DG0 / RTCF1 / RTCF1 / DG0 / DG0 / DG0   (ch-limit-RTDG.ipynb)
+  4. 2D ternary with vacancies, Q2 / Q2 / [Q2]^2 / [Q2]^2 / Q2 / Q2 / Q2        (ch-limit-CG2.ipynb)
 
 Run inside the repo's container (dolfinx 0.7.2):
 
@@ -11,11 +18,11 @@ import numpy
 from mpi4py import MPI
 from dolfinx.fem import FunctionSpace, Function, form, assemble_vector
 from dolfinx.mesh import create_interval, create_unit_square, CellType
-from ufl import (TestFunction, jump, FacetNormal, dot, div, FiniteElement,
+from ufl import (TestFunction, jump, FacetNormal, dot, div, grad, FiniteElement, VectorElement,
                  MixedElement, split, Measure, derivative, replace)
 from ufl.algorithms import expand_derivatives
 
-# --- free energies (cell 7 of the notebook, verbatim) --------------------------
+# --- free energies (verbatim from the notebooks) ------------------------------
 def magnitude(x):
     return (x**2)**(1/2)
 
@@ -50,86 +57,104 @@ def compare(b_old_form, b_new_form, label):
     b_new = assemble_vector(form(b_new_form)).array
     diff = numpy.abs(b_old - b_new).max()
     scale = numpy.abs(b_old).max()
-    print(f"{label:28s} max|dL_old - dL_new| = {diff:.3e}  (|dL| ~ {scale:.3e})")
+    print(f"{label:44s} max|dL_old - dL_new| = {diff:.3e}  (|dL| ~ {scale:.3e})")
     assert diff <= 1e-12 * max(scale, 1.0)
 
 
-# --- 1D binary (cells 18/19 layout) --------------------------------------------
-domain = create_interval(MPI.COMM_WORLD, 50, (0.0, 1.0))
-n = FacetNormal(domain)
-DG = FunctionSpace(domain, ("DG", 0))
-e_CG = FiniteElement("CG", domain.ufl_cell(), 1)
-e_DG = FiniteElement("DG", domain.ufl_cell(), 0)
-W = FunctionSpace(domain, MixedElement([e_DG, e_CG, e_DG]))
-w = Function(W)
-(X, j, a) = split(w)
-q = TestFunction(W)
-dt = 1e-3
-dx = Measure("dx", metadata={"quadrature_degree": 1})
-dS = Measure("dS")
-
-X_n = Function(DG)
-X_n.interpolate(lambda x: x[0])
 rng = numpy.random.default_rng(1)
-w.x.array[:] = 0.4 + 0.1*rng.standard_normal(w.x.array.size)
+dt = 1e-3
 
-# published construction
-L_old = ((f_0(X)-f_0(X_n))/dt + dot(j, j)/2 + a*((X-X_n)/dt + j.dx(0)))*dx
-L_old += (0.005/dt)*dot(jump(X, n), jump(X, n))*dS
-dL_old = derivative(L_old, w, q)
+# --- 1. and 2.: 1D binary -------------------------------------------------------
+for layout in ["DG0/CG1/DG0 + jump penalty", "CG2/CG2/CG2 + gradient energy"]:
+    domain = create_interval(MPI.COMM_WORLD, 50, (0.0, 1.0))
+    n = FacetNormal(domain)
+    dS = Measure("dS")
+    if layout.startswith("DG0"):
+        S = FunctionSpace(domain, ("DG", 0))
+        e_s = FiniteElement("DG", domain.ufl_cell(), 0)
+        e_j = FiniteElement("CG", domain.ufl_cell(), 1)
+        dx = Measure("dx", metadata={"quadrature_degree": 1})
+        reg = lambda X: 0.005*dot(jump(X, n), jump(X, n))*dS
+    else:
+        S = FunctionSpace(domain, ("CG", 2))
+        e_s = FiniteElement("CG", domain.ufl_cell(), 2)
+        e_j = e_s
+        dx = Measure("dx", metadata={"quadrature_degree": 4})
+        reg = lambda X: 5e-5*dot(grad(X), grad(X))*dx
+    W = FunctionSpace(domain, MixedElement([e_s, e_j, e_s]))
+    w = Function(W)
+    (X, j, a) = split(w)
+    q = TestFunction(W)
+    X_n = Function(S)
+    X_n.interpolate(lambda x: x[0])
+    w.x.array[:] = 0.4 + 0.1*rng.standard_normal(w.x.array.size)
 
-# clean TEP construction
-X_s = Function(DG)
-X_s.x.array[:] = rng.random(X_s.x.array.size)  # value irrelevant: replaced
-X_t = (X-X_n)/dt
-F = f_0(X_s)*dx + 0.005*dot(jump(X_s, n), jump(X_s, n))*dS
-dF = expand_derivatives(derivative(F, X_s, X_t))
-L_new = dF + (dot(j, j)/2 + a*(X_t + j.dx(0)))*dx
-dL_new = derivative(L_new, w, q)
-dL_new = replace(expand_derivatives(dL_new), {X_s: X})
+    # incremental construction (the one that produced the published figures)
+    L_old = ((f_0(X)-f_0(X_n))/dt + dot(j, j)/2 + a*((X-X_n)/dt + j.dx(0)))*dx
+    L_old += (1.0/dt)*reg(X)
+    dL_old = derivative(L_old, w, q)
 
-compare(dL_old, dL_new, "1D binary (CH + jump)")
+    # clean TEP construction
+    X_s = Function(S)
+    X_s.x.array[:] = rng.random(X_s.x.array.size)  # value irrelevant: replaced
+    X_t = (X-X_n)/dt
+    v = Function(S)                                    # placeholder direction, replaced by the rate
+    F = f_0(X_s)*dx + reg(X_s)
+    dF = replace(expand_derivatives(derivative(F, X_s, v)), {v: X_t})
+    L_new = dF + (dot(j, j)/2 + a*(X_t + j.dx(0)))*dx
+    dL_new = derivative(L_new, w, q)
+    dL_new = replace(expand_derivatives(dL_new), {X_s: X})
 
-# --- 2D ternary with vacancies (cells 29/37 layout) ----------------------------
-domain = create_unit_square(MPI.COMM_WORLD, 8, 8, CellType.quadrilateral)
-DG = FunctionSpace(domain, ("DG", 0))
-e_DG = FiniteElement("DG", domain.ufl_cell(), 0)
-e_RT = FiniteElement("RTCF", domain.ufl_cell(), 1)
-W = FunctionSpace(domain, MixedElement([e_DG, e_DG, e_RT, e_RT, e_DG, e_DG, e_DG]))
-w = Function(W)
-(X0, X1, j0, j1, a0, a1, phi) = split(w)
-q = TestFunction(W)
-dx = Measure("dx", metadata={"quadrature_degree": 1})
+    compare(dL_old, dL_new, f"1D binary, {layout}")
 
-X0_ = Function(DG)
-X1_ = Function(DG)
-X0_.x.array[:] += 1e-3
-X1_.interpolate(lambda x: x[0])
-w.x.array[:] = 0.4 + 0.1*rng.standard_normal(w.x.array.size)
+# --- 3. and 4.: 2D ternary with vacancies --------------------------------------
+for layout in ["DG0 / RTCF1 (Raviart-Thomas)", "Q2 / [Q2]^2 (equal order)"]:
+    domain = create_unit_square(MPI.COMM_WORLD, 8, 8, CellType.quadrilateral)
+    if layout.startswith("DG0"):
+        S = FunctionSpace(domain, ("DG", 0))
+        e_s = FiniteElement("DG", domain.ufl_cell(), 0)
+        e_j = FiniteElement("RTCF", domain.ufl_cell(), 1)
+        dx = Measure("dx", metadata={"quadrature_degree": 1})
+    else:
+        S = FunctionSpace(domain, ("CG", 2))
+        e_s = FiniteElement("CG", domain.ufl_cell(), 2)
+        e_j = VectorElement("CG", domain.ufl_cell(), 2)
+        dx = Measure("dx", metadata={"quadrature_degree": 4})
+    W = FunctionSpace(domain, MixedElement([e_s, e_s, e_j, e_j, e_s, e_s, e_s]))
+    w = Function(W)
+    (X0, X1, j0, j1, a0, a1, phi) = split(w)
+    q = TestFunction(W)
 
-def f0(X0, X1):
-    return f0_(X1) + 100*(X0-1e-3)**2
+    X0_ = Function(S)
+    X1_ = Function(S)
+    X0_.x.array[:] += 1e-3
+    X1_.interpolate(lambda x: x[0])
+    w.x.array[:] = 0.4 + 0.1*rng.standard_normal(w.x.array.size)
 
-# published construction
-L_old = (f0(X0, X1) - f0(X0_, X1_))/dt
-L_old += dot(j1, j1)/2 + dot(-j0-j1, -j0-j1) + phi**2
-L_old += a1*((X1-X1_)/dt + div(j1) + phi*X1_) + a0*((X0-X0_)/dt + div(j0) - phi*(1-X0_))
-L_old = L_old*dx
-dL_old = derivative(L_old, w, q)
+    def f0(X0, X1):
+        return f0_(X1) + 100*(X0-1e-3)**2
 
-# clean TEP construction
-X0_s, X1_s = Function(DG), Function(DG)
-X0_s.x.array[:] = rng.random(X0_s.x.array.size)
-X1_s.x.array[:] = rng.random(X1_s.x.array.size)
-X0_t, X1_t = (X0-X0_)/dt, (X1-X1_)/dt
-F = f0(X0_s, X1_s)*dx
-dF = expand_derivatives(derivative(F, X0_s, X0_t) + derivative(F, X1_s, X1_t))
-L_new = dot(j1, j1)/2 + dot(-j0-j1, -j0-j1) + phi**2
-L_new += a1*(X1_t + div(j1) + phi*X1_) + a0*(X0_t + div(j0) - phi*(1-X0_))
-L_new = dF + L_new*dx
-dL_new = derivative(L_new, w, q)
-dL_new = replace(expand_derivatives(dL_new), {X0_s: X0, X1_s: X1})
+    # incremental construction
+    L_old = (f0(X0, X1) - f0(X0_, X1_))/dt
+    L_old += dot(j1, j1)/2 + dot(-j0-j1, -j0-j1) + phi**2
+    L_old += a1*((X1-X1_)/dt + div(j1) + phi*X1_) + a0*((X0-X0_)/dt + div(j0) - phi*(1-X0_))
+    L_old = L_old*dx
+    dL_old = derivative(L_old, w, q)
 
-compare(dL_old, dL_new, "2D ternary (vacancies)")
+    # clean TEP construction
+    X0_s, X1_s = Function(S), Function(S)
+    X0_s.x.array[:] = rng.random(X0_s.x.array.size)
+    X1_s.x.array[:] = rng.random(X1_s.x.array.size)
+    X0_t, X1_t = (X0-X0_)/dt, (X1-X1_)/dt
+    v0, v1 = Function(S), Function(S)                 # placeholder directions
+    F = f0(X0_s, X1_s)*dx
+    dF = replace(expand_derivatives(derivative(F, X0_s, v0) + derivative(F, X1_s, v1)), {v0: X0_t, v1: X1_t})
+    L_new = dot(j1, j1)/2 + dot(-j0-j1, -j0-j1) + phi**2
+    L_new += a1*(X1_t + div(j1) + phi*X1_) + a0*(X0_t + div(j0) - phi*(1-X0_))
+    L_new = dF + L_new*dx
+    dL_new = derivative(L_new, w, q)
+    dL_new = replace(expand_derivatives(dL_new), {X0_s: X0, X1_s: X1})
 
-print("dolfinx 0.7.2: clean construction == published forms.")
+    compare(dL_old, dL_new, f"2D ternary (vacancies), {layout}")
+
+print("dolfinx 0.7.2: clean construction == incremental construction for all four layouts.")
