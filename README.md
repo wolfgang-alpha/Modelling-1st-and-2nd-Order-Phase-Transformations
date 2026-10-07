@@ -18,8 +18,8 @@ energy-dissipation inequality for every convex molar free energy (Proposition 1 
 
 | File | Purpose |
 |---|---|
-| `ch-limit-CG2.ipynb` | Equal-order continuous P2/Q2 elements for mole fraction, flux and affinity. **Produces all figures of the paper** (1D: Figs. 2-6, 2D: Figs. 7-12). Incremental-functional construction. |
-| `ch-limit-RTDG.ipynb` | Raviart-Thomas / discontinuous pair (DG0 / CG1 / DG0 in 1D, DG0 / RTCF1 / DG0 in 2D), gradient energy as facet jump penalty. Cross-check of the sharp-interface case (Fig. 9b of the paper). Uses the clean TEP construction (variation w.r.t. rates and multipliers at the frozen state, then backward Euler). |
+| `ch-limit-CG2.ipynb` | Equal-order continuous P2/Q2 elements for mole fraction, flux and affinity. **Produces all figures of the paper** (1D: Figs. 2-6, 2D: Figs. 7-9 and 11-13). Incremental-functional construction. |
+| `ch-limit-RTDG.ipynb` | Raviart-Thomas / discontinuous pair (DG0 / CG1 / DG0 in 1D, DG0 / RTCF1 / DG0 in 2D), gradient energy as facet jump penalty. Cross-check of the sharp-interface case (Fig. 10 of the paper). Uses the clean TEP construction (variation w.r.t. rates and multipliers at the frozen state, then backward Euler). |
 | `verify_construction.py` | Checks that the two constructions assemble identical residuals (to ~1e-15 relative) for all four element layouts of the two notebooks. |
 | `code/check_identity.py` | Numerical check of Proposition 1: exact mass conservation and the identity F[x^{n+1}] + dt P[j^{n+1}] + B_n = F[x^n] (1D, both element choices). |
 | `code/compare_elements_1d.py` | 1D comparison of four element choices on the sharp-interface case (Table 1 of the paper). |
@@ -49,9 +49,9 @@ All computations use dolfinx 0.7.2 (the API of later releases differs).
 | Case | CG2 (paper figures) | RT/DG |
 |---|---|---|
 | Cahn-Hilliard (Fig. 8) | 17 min | 32 min |
-| case (ii), convex hull, kappa = 0 (Fig. 9 / 9b) | 109 min | 4 min |
-| case (i), convex hull + regularization (Fig. 10) | 100 min | 30 min |
-| ternary with vacancies (Figs. 11, 12) | 723 min | 14 min |
+| case (ii), convex hull, kappa = 0 (Fig. 9 / Fig. 10) | 109 min | 4 min |
+| case (i), convex hull + regularization (Fig. 11) | 100 min | 30 min |
+| ternary with vacancies (Figs. 12, 13) | 723 min | 14 min |
 
 The cost is governed by the convergence of the damped Newton iteration in the convex-hull cases,
 not by the regularization.
