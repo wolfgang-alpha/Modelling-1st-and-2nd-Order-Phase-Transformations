@@ -23,6 +23,15 @@ Sources and their dates:
 Equation numbers in the text refer to the respective old version and are kept only
 where the sentence needs them.
 
+**Reinstated in v3 (November 2026).** After this file was compiled, four of the passages were
+put back into the paper in condensed form: the Cahn–Hilliard quotation on $\kappa \le 0$ and
+the "unstable region" (Section 2 below, now in Section 1.2 of the paper), the paragraph on mole
+fraction, phase fraction and order parameter (Section 3.1, now in the Motivation), the remark on
+affinity versus chemical potential (Section 3.5, now in Section 2.1, with the diffusion potential
+of Larché and Cahn), and the facet (jump-penalty) form of the gradient energy for the
+Raviart–Thomas/DG pair (Section 6, now equation (62) in Section 4.2). The remaining passages
+stay out of the paper and are preserved here only.
+
 ---
 
 ## 1. Original abstracts and keywords
