@@ -29,7 +29,7 @@ the "unstable region" (Section 2 below, now in Section 1.2 of the paper), the pa
 fraction, phase fraction and order parameter (Section 3.1, now in the Motivation), the remark on
 affinity versus chemical potential (Section 3.5, now in Section 2.1, with the diffusion potential
 of Larché and Cahn), and the facet (jump-penalty) form of the gradient energy for the
-Raviart–Thomas/DG pair (Section 6, now equation (62) in Section 4.2). The remaining passages
+Raviart–Thomas/DG pair (Section 6, now equation (60) in Section 4.2). The remaining passages
 stay out of the paper and are preserved here only.
 
 ---
