@@ -23,6 +23,7 @@ energy-dissipation inequality for every convex molar free energy (Proposition 1 
 | `verify_construction.py` | Checks that the two constructions assemble identical residuals (to ~1e-15 relative) for all four element layouts of the two notebooks. |
 | `code/check_identity.py` | Numerical check of Proposition 1: exact mass conservation and the identity F[x^{n+1}] + dt P[j^{n+1}] + B_n = F[x^n] (1D, both element choices). |
 | `code/compare_elements_1d.py` | 1D comparison of four element choices on the sharp-interface case (Table 1 of the paper). |
+| `docs/removed-passages.md` | Text written for the 2024 drafts (first notebook draft, journal submission, arXiv v2) that was cut from v3 of the paper: thermodynamics of the double well, Landau theory, history of the TEP, the original R1/D0 formulation with jump penalty, variable molar volumes (old Appendix B), old results narrative. Preserved for reference. |
 | `batch.sh` | Launches JupyterLab in the `dolfinx/lab:v0.7.2` container with the repository mounted. |
 
 ## Quickstart with Docker (Linux/Unix, Windows with WSL and docker integration enabled)
